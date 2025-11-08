@@ -1,2 +1,2 @@
 place holder
-<a>logisticRegressionExample.html</a>
+<a href=logisticRegressionExample.html>logistic regression:optimizing expected returns</a>
