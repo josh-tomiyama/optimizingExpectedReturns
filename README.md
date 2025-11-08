@@ -1,2 +1,2 @@
 place holder
-<div class = "links"> <a href="logisticRegressionExample.html">logistic regression:optimizing expected returns</a> </div>
+<div class = "links"> <a href="./logisticRegressionExample.html">logistic regression:optimizing expected returns</a> </div>
