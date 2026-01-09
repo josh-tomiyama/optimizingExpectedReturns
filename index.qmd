@@ -1,7 +1,7 @@
 ---
 title: "Logistic Regression Analysis Example: Optimizing Expected Returns"
-author: "Josh Tomiyama"
-date: "2025-11-07"
+date: "2026-01-13"
+description: "A simulated study on how to build a logistic regression model and utilize it to optimize a target variable"
 categories:
   - "Machine Learning"
   - "Logistic Regression"
@@ -26,6 +26,7 @@ library(arm)
 library(gtsummary)
 library(dplyr)
 library(ggplot2)
+library(future.apply)
 ```
 
 # Introduction
@@ -36,11 +37,11 @@ The article is organized into the following parts:
 
 1.  A basic introduction of the logistic regression model and its comparison to other machine learning models
 
-2.  A simulated example detailing the workflow to build a logistic regression model
+2.  A simulated example detailing the workflow to build a logistic regression model [jump to section](#prob)
 
-3.  Methods to leverage the logistic regression model to optimize some target goal
+3.  Methods to leverage the logistic regression model to optimize some target goal [jump to section](#sec-optimize)
 
-4.  Discussion of how to approach practical problems when the data is less than ideal
+Readers who are already familiar with logistic regression models may want to skip to the section that details the analysis question and then skip to the section on how to optimize for a target goal.
 
 # Logistic Regression
 
@@ -52,7 +53,9 @@ where $i$ refers to the data sample index (think of a row in your data table), $
 
 $\log(\frac{\pi_i}{1-\pi_i}) = \pmb x_i \pmb \beta$
 
-where $\pmb x_i$ is a vector of covariates that you think explain the probability of success and $\pmb \beta$ is the vector of weights that indicate how strongly they contribute to the log-odds of success. When estimating the logistic regression model the $\pmb \beta$ coefficients are the main parameters of interest (as $\pi_i$ is derived from $\pmb \beta$). The reason we call it "logistic" regression is because $\log(\frac{x_i}{1-x_i})$ is the inverse of the logistic function.
+where $\pmb x_i$ is a vector of covariates that you think explain the probability of success and $\pmb \beta$ is the vector of weights that indicate how strongly they contribute to the log-odds of success. Vectors are simply shorthand notation to represent collection of all the covariates in the model and their corresponding parameters.
+
+When estimating the logistic regression model, the $\pmb \beta$ coefficients are the main parameters of interest (as $\pi_i$ is derived from $\pmb \beta$). The reason we call it "logistic" regression is because $\log(\frac{x_i}{1-x_i})$ is the inverse of the logistic function.
 
 The assumptions of the model are as follows:
 
@@ -88,26 +91,24 @@ Choosing a functional relationship alone produces infinite possibilities for one
 
 The advantages and shortfalls of logistic regression compared to other machine learning techniques naturally extend to any generalized linear model such as linear regression. To be clear, I am **NOT** saying that in these scenarios generalized linear models will **ALWAYS** surpass the newer machine learning models and algorithms, but rather that these scenarios **ALLOW** generalized linear models to shine just as well, if not better, than their other machine learning counterparts in terms of predictiveness.
 
-# A Novel Application Problem
+# A Novel Application Problem {#prob}
 
 Suppose that one is starting an online clothing store selling clothes, shoes, and accessories. They have the production cost of each product and wish to know what markup percentage is optimal for generating the most revenue. The data is set up such that we have many offers for products on sale for different markup percentages and it is recorded whether the sale was made or not. From past data, it is plausible that the type of product (clothes, shoes, accessories) has an affect on whether a sale is made.
 
-Defining and estimating the optimal markup percentage is the novel part of the analysis that I think differentiates this analysis from typical logistic regression analyses. If the problem seems somewhat uninspiring, I obfuscated the real application for privacy reasons. This simplified problem does target the core methods and ideas for that application.
+Defining and estimating the optimal markup percentage is the novel part of the analysis that I think differentiates this analysis from typical logistic regression analyses where the focus is usually on determining a statistically significant relationship between a covariate and the outcome of interest.
 
-Before jumping into the analysis or looking at the data, it is imperative to decide whether the analysis is attempting to optimize prediction or inference. Although inference and prediction are similar goals and a way Because of the optimization scheme I outline in a later section, I believe having an unbiased estimate of $\pi_i$ and $\beta_{markup}$ is the main goal, so I interpret this as predominantly an inference problem because of that.
+# Simulating Toy Data {#sec-simdata}
 
-# Simulating toy data
+Before proceeding with the analysis, we shall simulate a toy data set in R that will fit the problem. In the ideal case, I would have found a real world data set that matches our example, but my superficial search of the internet returned only aggregated product sales and wouldn't quite match the situation described above. This does detract from exploratory analyses as I know how the data is generated and greatly simplifies the model building process. However, the general workflow and considerations for building the model would be the same with a real data set.
 
-Before proceeding with the analysis we shall simulate a toy data set in R that will fit the problem. We will use the following logistic regression model to simulate data:
-
-From this set up, we can propose the following logistic regression model:
+We will use the following logistic regression model to simulate data:
 
 $$
 \log(\frac{\pi_i}{1 - \pi_i}) = \beta_0 + x_{markup} * \beta_{markup} + 
 x_{cost} * \beta_{cost} + x_{type=shoes} * \beta_{type=shoes} + x_{type = clothes}*\beta_{type = clothes}
 $$
 
-where $x_{markup}$ is the markup percentage above 0 (above 100 is allowed), $x_{cost}$ is cost in dollars, $x_{type=shoes}$ is 1 when product $i$ is shoes and 0 otherwise, and similarly $x_{type = clothes}$ is 1 when product $i$ is clothes and 0 otherwise. When product $i$ is accessories, both $x_{type=shoes}$ and $x_{type = clothes}$ are 0. The way that $x_{type}$ is encoded is known as the dummy variable encoding common in statistics (which is different from the one-hot encoding more prevalent in the machine learning field). The outcome of interest $Y_i$ is a binary variable where 1 indicates the product was sold and 0 the product was not sold, and it follows that $\pi_i$ is the probability that product $i$ is sold or not. To clarify about the $x_{markup}$ covariate, if $x_{markup} = 20$ then the product was marked up $20\%$.
+where $x_{markup}$ is the markup percentage above 0 (above 100 is allowed), $x_{cost}$ is cost in dollars, $x_{type=shoes}$ is 1 when product $i$ is shoes and 0 otherwise, and similarly $x_{type = clothes}$ is 1 when product $i$ is clothes and 0 otherwise. When product $i$ is accessories, both $x_{type=shoes}$ and $x_{type = clothes}$ are 0. The way that $x_{type}$ is encoded is known as the dummy variable encoding common in statistics (which is different from the one-hot encoding more prevalent in the machine learning field). The outcome of interest $Y_i$ is a binary variable where 1 indicates the product was sold and 0 the product was not sold, and it follows that $\pi_i$ is the probability that product $i$ is sold or not. To clarify further about the $x_{markup}$ covariate, if $x_{markup} = 20$ then the product was marked up $20\%$.
 
 I chose the values for true parameters $\pmb \beta$ that I felt gave a good spread of the true probabilities while also being representative of the expected behavior in the example problem described to me. I arbitrarily chose a decently large sample size of 3000 to ensure proper estimation.
 
@@ -163,19 +164,21 @@ x_df$sold <- sold
 # x_df$true_log_odds <- c(log_odds)
 ```
 
-Here are the first few rows of the data set to get an idea of how the data is organized:
+Here are the first few rows of the data set to get an idea of how the data is organized and its values:
 
 ```{r}
 head(x_df, 5) %>%
-  kable() %>%
+  kable(align = 'c') %>%
   kable_styling()
 ```
 
 # Example Logistic Regression Analysis
 
-## Quick Exploratory analysis of the Data Set
+Before jumping into the analysis or looking at the data, it is imperative to determine whether the analysis is attempting to optimize prediction or inference. Although a model that infers relationships well typically predicts well and vice versa, the criteria statisticians use to judge what model is best typically favor one over the other. Because of the optimization scheme I outline in a [later section](#sec-optimize), I believe having an unbiased estimate of $\pi_i$ and $\beta_{markup}$ is the main goal, so I interpret this as predominantly an inference problem because of that.
 
-When starting an analysis, it's important to first summarize and get a feel of the data. This is a useful and important step as it informs what are reasonable models for the data and indicates the quality of the data.
+## Quick Exploratory Analysis of the Data Set
+
+When starting an analysis, it's important to first summarize and get a feel of the data. This is a useful and important step as it informs what are reasonable models for the data and indicates the quality of the data. The `gtsummary` package is used to produce the pretty summary tables presented below.
 
 ```{r}
 #| label: tbl-summ
@@ -213,7 +216,7 @@ plot(markup, cost,
      xlab = "markup of product (%)")
 ```
 
-The first table summarizes the different covariates and outcome by type. Inspecting the average and quartiles of markup and cost between the different types, we don't notice any difference in the distributions. This implies that type is associated with neither the cost nor markup, which is a best case scenario for a logistic regression analysis. The proportion of successful sales is different among the product types with clothes and shoe products selling at a higher rate than the accessories. This implies that there may be an association between type and product sales. Clearly, there is an imbalance in the distribution of type in the data set, but we have enough cases of each product type such that including type in the logistic regression model shouldn't be a problem.
+The first table summarizes the different covariates and outcome by type. Inspecting the average and quartiles of markup and cost between the different types, we don't notice any difference in the distributions. This implies that type is associated with neither the cost nor markup, and this is a best case scenario for a logistic regression analysis. The proportion of successful sales is different among the product types with clothes and shoe products selling at a higher rate than the accessories. This implies that there may be an association between type and product sales. Clearly, there is an imbalance in the distribution of type in the data set, but we have enough cases of each product type such that including type in the logistic regression model shouldn't be a problem.
 
 The second table summarizes markup and the cost variables by whether the product sold (the 1 group) or not (the 0 group). Comparing these two groups, we can clearly see that markup is lower in the groups that sold and indicates a negative association between sales and markup. The distribution of cost shifts about 100 dollars higher in the group that sold and thus suggests a positive association between cost and sales.
 
@@ -235,7 +238,7 @@ result <- data.frame(truth = true_beta,
                      ci_lwr = ci[,1],
                      ci_upr = ci[,2])
 
-kable(result, digits = 4) %>% 
+kable(result, digits = 4, align = 'c') %>% 
   kable_styling()
 ```
 
@@ -261,7 +264,7 @@ $$
 \log(\frac{\pi_i}{1 - \pi_i}) = \beta_0 + x_{markup} * \beta_{markup}
 $$
 
-There are many model selection criteria to choose from and which one to use depends on the goal of the analysis. In this application, the goal is estimation and inference, so I would personally advocate for the Bayesian Information Criterion (BIC). The BIC is a quantity that expresses how well the proposed model fits the data while also balancing how many parameters are in a model. More parameters in a model results in a better fit to the data but too many parameters results in overfitting. The problem with an overfit model is the lack of generalizability to new data. Please refer to the BIC() documentation to see the formula for its calculation. BIC favors having less parameters in a model as compared to it's counterpart the Akaike Information Criterion (AIC). Therefore, the BIC is sometimes the preferred model selection criterion when the goal is to identify what covariates to go into a model.
+There are many model selection criteria to choose from and which one to use depends on the goal of the analysis. In this application, the goal is estimation and inference, so I would personally advocate for the Bayesian Information Criterion (BIC). The BIC is a quantity that expresses how well the proposed model fits the data while also balancing how many parameters are in a model. More parameters in a model results in a better fit to the data but too many parameters results in overfitting. The problem with an overfit model is the lack of generalizability to new data. Please refer to the [BIC() documentation](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/AIC) to see the formula for its calculation. BIC favors having less parameters in a model as compared to it's counterpart the Akaike Information Criterion (AIC). Therefore, the BIC is sometimes the preferred model selection criterion when the goal is to identify what covariates to go into a model.
 
 Lower values of BIC indicate a better statistical model for the data. A difference of at least 2 is the typical threshold to consider one model superior the other. For differences of less than 2 the models are about equivalent and the statistician must decide which model is superior.
 
@@ -280,34 +283,41 @@ df_model_selection <- data.frame(model = c("True_model", "no_type", "quadratic_m
                                  bic = c(BIC(fit), BIC(fit1), BIC(fit2), BIC(fit3))
                                  ) 
 df_model_selection %>%    
-  kable(digits = 2, caption = "Smaller BIC indicates better model") %>%  
+  kable(digits = 2, align = 'c', caption = "Smaller BIC indicates better model") %>%  
   kable_styling()
 
 ```
 
 Upon inspecting the BIC values, the true model is unsurprisingly the lowest BIC and thus the best model. Disregarding our knowledge of the true data generating model, the model chosen at this step strongly translates the trends observed in the exploratory data analysis step, and thus highlights the importance of exploring the data before building models. The simple model with just markup is clearly the worst model with the highest BIC, so although the simple model would drastically simplify our optimal estimation of $\pi_i$ in the next step, the data indicates a more complex relationship between the outcome and covariates is more appropriate.
 
-Although we only inspect 4 models here, usually one would explore many more models and spend the bulk of their time trying to figure out the best model. More complex relationships like interactions and different functional transformations of continuous variables could be considered. Based on the exploratory analysis, this does not seem necessary in this analysis.
+Although we only inspect 4 models here, usually one would explore many more models and spend the bulk of their time trying to figure out the best model. Usually background knowledge of important factors is involved when building the model and some consideration of limitations in the data quality. More complex relationships like interactions and different functional transformations of continuous variables could also be considered. Based on the exploratory analysis, this does not seem necessary in this analysis.
 
 ## Assessing Model Assumptions
 
-Assessing whether the model assumptions are violated is often overlooked when fitting a logistic regression model. The main ones to assess are linearity of covariates (assumption 2), independent sampling (assumption 3), and multicollinearity (assumption 4). Perfect separation (assumption 5) is normally a warning from R if that occurs.
+Assessing whether the model assumptions are violated is often overlooked when fitting a logistic regression model. The main ones to assess are linearity of covariates (assumption 2) and multicollinearity (assumption 4). The independent sampling assumption (assumption 3) is usually considered when planning the analysis and can potentially investigated through exploratory analysis. Things to look for include covariates that strongly correlate, categorical values that do not have any observed success, and background knowledge about whether independence makes sense. Perfect separation (assumption 5) is normally a warning from R if/when that occurs.
 
-Based on the exploratory analysis earlier, multicollinearity is not likely not an issue in this data set. We know this for a fact because I generated the data independently. The exploratory analysis revealed that there wasn't any clear relationship between pairs of the covariates, and all of the parameters in the model are statistically significant. These are both great signs that multicollinearity is not present. However, to formally check for multicollinearity, one can check the Variance Inflation Factors (VIFs) in the covariates. I'll skip this step for now but one can read more on VIF theory here: https://online.stat.psu.edu/stat462/node/180/ and how to calculate it using the `car` package in R here: https://www.r-bloggers.com/2023/12/exploring-variance-inflation-factor-vif-in-r-a-practical-guide/.
+### Assessing Multicollinearity
 
-I will note though that if one adds higher order terms in the regression, for example
+Based on the exploratory analysis earlier, multicollinearity is not likely not an issue in this data set. We know this for a fact because I generated the data independently. The exploratory analysis revealed that there wasn't any clear relationship between pairs of the covariates, and all of the parameters in the model are statistically significant. These are both great signs that multicollinearity is likely not present. However, to formally check for multicollinearity, one can check the Variance Inflation Factors (VIFs) in the covariates. I'll omit checking the VIFs due to the exploratory analysis revealing a high quality data set, but one can read more on VIF theory here: [article](https://online.stat.psu.edu/stat462/node/180/) and how to calculate it using the `car` package in R here: [article](https://www.r-bloggers.com/2023/12/exploring-variance-inflation-factor-vif-in-r-a-practical-guide/).
+
+I will note though that if one adds higher order terms in the regression, for example,
 
 $$
 \log(\frac{\pi_i}{1 - \pi_i}) = \beta_0 + x_{markup} * \beta_{markup} + x_{markup}^2 * \beta_{markup^2}
-$$ then instead of the VIF one will need to inspect the Generalized Variance Inflation Factor (GVIF).
+$$ 
+then instead of the VIF one will need to inspect the Generalized Variance Inflation Factor (GVIF).
 
-The hardest assumption to verify is the linearity assumption. This only applies to continuous covariates which are markup and cost in this example. We can use the `binnedplot` function in the `arm` package to assess this. What this function does is bin or discretize the continuous variable into equally spaced segments. Within each segment, calculate the residual for the observations via:
+### Assessing linearity
+
+The hardest assumption to verify and is most often overlooked is the linearity assumption. This only applies to continuous covariates which are markup and cost in this example. We can use the `binnedplot` function in the `arm` package to assess this. What this function does is bin or discretize the continuous variable into equally spaced segments. Within each segment, calculate the residual for the observations via:
 
 $$
   residual_i = y_i - \hat \pi_i 
-$$ where $\hat \pi_i$ is calculated from a proposed logistic regression model. We inspect the plot to make sure that the residuals are randomly scattered around the $y = 0$ horizontal line, there is no pattern in the residuals, and that at most \~5% of the residuals are outside of the confidence interval lines.
+$$ 
 
-These binned residuals plots assume a large sample size for the statistical properties to hold. Specifically **if the sample size is large within each bin**, then the expected value of these residuals is 0 with known standard errors due to the Lindeberg-Feller central limit theorem. My personal rule-of-thumb is at least 30 observations to be reasonably confident in the approximation, but the more the better. Unfortunately, the binned plots from the arm package don't throw warnings when the bins have small sample size, so some caution is needed when interpretting these plots. In addition to large sample sizes, for values of $\hat \pi_i$ close to 0 or 1, the statistical theory does not hold, so bins with mostly very low or very high predicted values of $\hat \pi_i$ are not as informative.
+where $\hat \pi_i$ is calculated from a proposed logistic regression model. We inspect the plot to make sure that the residuals are randomly scattered around the $y = 0$ horizontal line, there is no pattern in the residuals, and that at most \~5% of the residuals are outside of the confidence interval lines.
+
+Below is a plot to illustrate how the binned residuals are calculated. The points plotted in a binned residual plot would be the points observed in red.
 
 ```{r}
 ## example on how the binned residual plot is constructed
@@ -339,7 +349,10 @@ legend("topright",
        pch = 16)
 ```
 
-Let's look at several binned residual plots to assess whether our proposed model is reasonable.
+These binned residuals plots assume a large sample size for the statistical properties to hold. Specifically **if the sample size is large within each bin**, then the expected value of these residuals is 0 with known standard errors due to the Lindeberg-Feller central limit theorem. My personal rule-of-thumb is at least 30 observations to be reasonably confident in the approximation, but the more the better. Unfortunately, the binned plots from the arm package don't throw warnings when the bins have small sample size, so some caution is needed when interpreting these plots. In addition to large sample sizes, the statistical theory does not hold for values of $\hat \pi_i$ close to 0 or 1, so bins with predicted values of $\hat \pi_i$ close to 0 or 1 are not as informative.
+
+
+Let's look at several binned residual plots to assess whether our proposed model is reasonable. The first plot below is binned according the the predicted $\pi_i$ values. This is a nice overall assessment in the model and usually a good starting point of whether assumptions are violated. Most of the binned data points are within the theoretical confidence intervals and fairly close to 0. There isn't a strong pattern that I discern from the residuals, so I am personally satisfied with this plot.
 
 ```{r}
 res <- residuals(fit, type = "response")
@@ -349,14 +362,22 @@ binnedplot(x = fitted(fit),
            xlab="Expected Values", 
            ylab="Average residual", 
            main="Binned residual plot")
+```
 
+The next plot below is a binned residual plot where the bins are made according to the markup covariate. The plot seems fine nice and random and within the confidence intervals until the point where markup is 60\% or higher where the binned plot degenerates to 0. This is an expected pattern due to no sales being made for markups above 57\%,
+
+```{r}
 binnedplot(x = x_df$markup,
            y = res, 
            nclass=NULL, 
            xlab="Binned markup", 
            ylab="Average residual", 
            main="Binned residual plot of markup")
+```
 
+Below is a binned plot where the bins are defined by the cost variable. This is a nice plot where the random scatter is fairly tight and the values are almost all within the confidence intervals.
+
+```{r}
 binnedplot(x = x_df$cost,
            y = res, 
            nclass=NULL, 
@@ -365,7 +386,11 @@ binnedplot(x = x_df$cost,
            main="Binned residual plot of cost")
 ```
 
-# Optimizing the Expected Returns (Expected Revenue)
+Based on the binned plots above, the logistic regression model strongly satisfies the linearity assumption. If there were any patterns in the residual plots, then one would need to refine the logistic regression model with higher order terms (i.e. $x_{cost}^2$) or nonlinear transformations (i.e. $\log(x_{cost})$) to address the patterns. This is not necessary by design, but a future post of mine will explore how to spot different patterns in residual plots.
+
+# Optimizing the Expected Returns (Expected Revenue) {#sec-optimize}
+
+Now that we have built a satisfactory logistic regression model, we may now proceed to calculating the optimal markup percentage. First we will show how to estimate $\pi_i$ using the logistic regression model and how we can calculate the optimal markup percentage.
 
 ## Relationship between $x_{markup}$ and $\pi_i$
 
@@ -424,7 +449,7 @@ ggplot(probs_df) +
 
 As expected, due to how well our estimates of the parameters are, the estimated probability curve in black is mostly overlapped by expected probabilities calculated from the true parameters in blue. As we can see from the graph above, the probability of selling decreases as markup increases. This isn't surprising given that the true parameter for markup is -0.02.
 
-Let's plot the differences between the true and predicted probabilities to really show how small the difference in magnitude is. We can see that the probabilities only differ at most by 0.02. Depending on the application context, this can be a meaningful difference or not, but for this application let's assume that an underestimation of 0.02 is a reasonably close estimate.
+Let's plot the differences between the true and predicted probabilities to really identify the small the difference in magnitude. We can see that the probabilities only differ at most by 0.02. Depending on the application context, this can be a meaningful difference or not, but for this application let's assume that an underestimation of 0.02 is a reasonably close estimate.
 
 ```{r}
 #| label: fig-diffprob
@@ -437,27 +462,33 @@ plot(x = probs_df$markup,
      main = "Difference between True and Predicted Probabilities")
 ```
 
-## Calculating the Optimal markup
+## Calculating the Optimal Markup
 
 We can propose the following function to express a balance between optimizing cost markup while increasing the probability of successfully selling the product:
 
-$f(x_{markup}) = (1 + \frac{x_{markup}}{100})x_{cost} \pi_i$
+$$
+f(x_{markup}) = (1 + \frac{x_{markup}}{100})x_{cost} \pi_i
+$$
 
-This function is derived from the idea of the expected total revenue generated by a new product. The new products total revenue is expressed as $(1 + \frac{x_{markup}}{100})*x_{cost}$ and the expected value of a new observation $Y_i$ is $\pi_i$ because $Y_i$ is a Bernoulli random variable (see appendix for small derivation). Thus, the expected total revenue generated from this product is the multiplication of these two quantities.
+This function is derived from the idea of the expected (aka average) total revenue generated by a new product. The new products total revenue is expressed as $(1 + \frac{x_{markup}}{100})*x_{cost}$ and the expected value of a new observation $Y_i$ is $\pi_i$ because $Y_i$ is a Bernoulli random variable (see [appendix](#sec-exp-return) for a small statistical derivation of this quantity). Thus, the expected total revenue generated from this product is the multiplication of these two quantities.
 
-The calculation of $\pi_i$ depends on $x_{markup}$ and $x_{cost}$.
+In the previous section, we calculated how to estimate $\pi_i$ using the logistic regression model and some chosen values for cost and type. So we have all of the needed components to calculate the function above and now we need to determine two things:
+
+  1. Whether a maximum value actually exists
+
+  2. What value of $x_markup$ maximizes the function.
+  
+The first part is rather easy to show with a graph below. Cost is set to the observed average cost in the data set (`r mean(x_df$cost)`) and type is set to the most common type of product in the data set `r getMode(x_df$type)`.
 
 ```{r}
 expected_return <- function(markup, cost, type, fit, log = FALSE){
   new_data <- data.frame(markup = markup,
                          cost = cost,
                          type = type)
-  # if(markup < 0){
-  #   return(-Inf)
-  # }
   
   if(log){
-   ### doing optimization on the log scale is more stable, if markup > 0
+   ### when doing optimization, the log scale is more stable if there are convergence issues
+   ### need to restrict if markup > 0
     log(1 + markup/100) + log(cost) + 
       log(predict(fit, newdata = new_data, type = "response"))
   }else{
@@ -466,13 +497,46 @@ expected_return <- function(markup, cost, type, fit, log = FALSE){
   }
 }
 
-optimal_vals <- optim(par = 50, 
+mode_type <- getMode(x_df$type)
+mean_cost <- mean(x_df$cost)
+x_markup_vals <- seq(0, 120, by = 0.1)
+exp_return_vals <- sapply(x_markup_vals, 
+                          expected_return, 
+                          cost = mean_cost, 
+                          type = mode_type, 
+                          fit = fit,
+                          log = FALSE)
+
+plot(x_markup_vals, 
+     exp_return_vals, 
+     type = 'l',
+     xlab = "markup (%)",
+     ylab = "Expected Return (Revenue)",
+     main = "Expected Revenue vs Markup Percentage")
+```
+
+From the graph above, it is clear that a maximum occurs around where markup is ~20% and the expected return is about ~2100. To calculate the exact value for the optimal markup and expected return, we will need to use a numerical optimization algorithm. In R, we can accomplish this using the `optim()` function. There are several different algorithms to choose from, in this case Broyden–Fletcher–Goldfarb–Shanno (BFGS) quasi-newton method is a great choice. Going into detail of the BFGS algorithm is beyond the scope of this project. The [wikipedia page](https://en.wikipedia.org/wiki/Broyden%E2%80%93Fletcher%E2%80%93Goldfarb%E2%80%93Shanno_algorithm) is an excellent starting point for more information. 
+
+Important outputs to note from the `optim()` function is `par` which is the markup value where the maximum occurs, `value` which is maximum revenue value, and `convergence` which should be 0 so that you know that the algorithm completed successfully.
+
+
+
+```{r}
+optimal_vals <- optim(
+      # initical guess
+      par = 20, 
+      # function to optimize
       fn = expected_return, 
+      # optimization algorithm
       method = "BFGS",
-      control = list(fnscale = -1), # do maximization not minimization
-      # These params don't change
-      cost = mean_cost[1], type = mode_type[1], fit = fit 
+      # do maximization, default is minimization
+      control = list(fnscale = -1),
+      # Additional params for function
+      cost = mean_cost[1], 
+      type = mode_type[1], 
+      fit = fit 
       )
+
 
 if(optimal_vals$convergence != 0){
   stop("The numerical optimization did not converge")
@@ -495,21 +559,23 @@ From this analysis, we find that for an accessory product that costs of \$`r rou
 
 Although our formula calculates an optimal markup of `r round(optimal_df$optimal_markup, digits = 2)` percent, we need to keep in mind that the range of markup in the data set are values between 20 and 120 percent. Thus, a markup of `r round(optimal_df$optimal_markup, digits = 2)` percent is outside the region covered by the data. I would suggest collecting more data in this range before widely adopting this decision rule.
 
-In this section we only looked at one specific combination of covariates. Of course, we may want to consider cases with combinations of product costs and product types. To explore these different scenarios more easily, I've created a Rshiny dashboard that'll be linked below when it's done.
+In this section we only looked at one specific combination of covariates where the product cost is equal to the average cost and the product type is the most common type in the data set. Of course, we may want to consider cases with combinations of product costs and product types. To explore these different scenarios more easily, I've created a Rshiny dashboard that'll be linked below when it's done.
 
 ## Hypothetical Impact of Optimal Markup strategy
 
-Let's assess the business impact of this optimal markup strategy is in terms of two important outcomes:
+Let's assess the business impact of this optimal markup strategy with regards two important business performance metrics:
 
 1.  The change in successful sales compared to the observed sales data
 
 2.  The change in revenue generated compared to the observed revenue
 
-For each point in our data set, we will substitute the observed optimal markup strategy with the optimal markup and check the change in sales and revenue.
+For each point in our data set, we will substitute the observed markup value with the optimal markup value and simulate whether the sale is successful or not. To account for extreme cases, such as when a 99\% chance sale fails, I will replicate the experiment 5000 times and calculate the average successful sales and revenue generated and compare these values to the observed revenue and sales.
+
+Calculating the optimal markup for the entire data set is a bit slow, so I used the `future.apply` package in R to run the the calculation in parallel. Going into detail about the `future.apply` package and the `future` backend is beyond the scope of this project, but I'll make a blog post about it sometime in the future (pun not intended).
 
 ```{r}
 calc_optimal_markup <- function(cost, type, fit){
-  optim(par = 50, 
+  optim(par = 20, 
       fn = expected_return, 
       method = "BFGS",
       control = list(fnscale = -1), # do maximization not minimization
@@ -518,20 +584,36 @@ calc_optimal_markup <- function(cost, type, fit){
       )  
 }
 
-optimal_markups <- mapply(calc_optimal_markup, 
-                          cost = x_df$cost, 
-                          type = x_df$type, 
-                          MoreArgs = list(fit = fit))
+# non-parallel (sequential) version
+
+# optimal_markups <- mapply(calc_optimal_markup,
+#                           cost = x_df$cost,
+#                           type = x_df$type,
+#                           MoreArgs = list(fit = fit)
+#                           )
+
+
+# set up parallel computing
+plan("multisession")
+# do the calculation for every data point in parallel
+# on my machine this speeds up the calculation about 6 fold
+optimal_markups <- future_mapply(calc_optimal_markup, 
+                                 cost = x_df$cost, 
+                                 type = x_df$type, 
+                                 MoreArgs = list(fit = fit)
+                                 )
+# return computing environment back to normal
+plan("sequential")
+
 optimal_x_df <- x_df
 optimal_x_df$markup <- unlist(optimal_markups[1,])
 
-hist(optimal_x_df$markup)
-
+## predicted probabilities with optimal markup
 hypothetical_probs <- predict(fit, 
                               newdata = optimal_x_df, 
                               type = 'response')
-est_probs <- predict(fit, newdata = x_df, type = 'response')
 
+### simulate whether a sale was made for the optimal markup data set, 5000 times
 set.seed(2013)
 expected_results <- replicate(5000,
           expr = {
@@ -541,21 +623,51 @@ expected_results <- replicate(5000,
                            sum(x_df$sold * (1 + x_df$markup/100)*x_df$cost)
             )
           })
-obs_revenue <- sum(x_df$sold * (1 + x_df$markup/100)*x_df$cost)
-
-optimal_results <- data.frame(ave_change_sales = mean(expected_results[1,]),
-                              ave_change_revenue = mean(expected_results[2,]),
-                              ave_percent_change_sales = mean(expected_results[1,])/sum(x_df$sold),
-                              ave_percent_change_revenue = mean(expected_results[2,]) / obs_revenue)
-optimal_results
 ```
 
-# Discussion
 
-Easy to extend to
+```{r}
+## create table of observed and optimal results
+obs_revenue <- sum(x_df$sold * (1 + x_df$markup/100)*x_df$cost)
+optimal_results <- data.frame(observed = c(sum(x_df$sold), obs_revenue),
+                              sim_ave = c(mean(expected_results[1,]),
+                                          mean(expected_results[2,]))
+                              )
 
+optimal_results <- optimal_results %>%
+                    mutate(percent_change = 
+                             100*ifelse(sim_ave/observed > 1, 
+                                        sim_ave/observed - 1, 
+                                        1 - sim_ave/observed),
+                           difference = sim_ave - observed
+                          )
+rownames(optimal_results) <- c("Sales", "Revenue")
 
-# Appendix: Deriving expected revenue formula
+## format the results for easier reading
+optimal_results <- as.data.frame(t(optimal_results))
+optimal_results %>% mutate(revenue = revenue)
+# optimal_results[2, c(1, 2, 4)] <- 
+label_currency(unlist(optimal_results[2, c(1, 2, 4)]))
+rownames(optimal_results) <- c("Sales", "Revenue")
+
+## print results
+optimal_results %>% 
+  kable(digits = 2, align = 'c') %>%
+  kable_styling() %>%
+  footnote("Revenue per 1000")
+```
+
+Write up the results
+
+# Discussion and Conclusion
+
+Easy to extend to other calculations that take into account profit margins such as tax calculations
+
+Can identify underperforming/unfeasible products
+
+Does not consider external economical factors or 
+
+# Appendix 1: Deriving Expected Revenue Formula {#sec-exp-return .appendix}
 
 First, we calculate that $(1 + \frac{x_{markup}}{100})x_{cost}$ would be the sales price of the item (ignoring any taxes).
 
@@ -563,17 +675,78 @@ Next let's derive a simple random variable $Z_i$ to represent the revenue genera
 
 $$Z_i = (1 + \frac{x_{markup}}{100})x_{cost} Y_i$$
 
-A straightforward application of deriving shows that
+A straightforward application of expectations shows that
 
 $$\mathbb E(Z_i) = (1 + \frac{x_{markup}}{100})x_{cost} \mathbb E(Y_i) =  (1 + \frac{x_{markup}}{100})x_{cost} \pi_i$$
 
-We have a (maximum-likelihood) estimate of $\pi_i$ that we will denote as $\hat \pi_i$. Thus our (maximum-likelihood) estimate of $E(Z_i)$ is
+where $E(Y_i) = \pi_i$ is a known property of the Bernoulli distribution.
+
+From our logistic regression model, we have a (maximum-likelihood) estimate of $\pi_i$ that we will denote as $\hat \pi_i$. Thus our (maximum-likelihood) estimate of $E(Z_i)$ is
 
 $\widehat{\mathbb E(Z_i)} = (1 + \frac{x_{markup}}{100})x_{cost} \hat \pi_i$.
 
-For the more statistically rigorous, the expectations here are conditional on the covariates in the logistic regression model and $\widehat{\mathbb E(Z_i)}$ is a maximum-likelihood estimator of $\mathbb E(Z_i)$.
+For the more statistically rigorous, the expectations here are conditional on the covariates $\pmb x_i$ in the logistic regression model and $\widehat{\mathbb E(Z_i)}$ is a maximum-likelihood estimator of $\mathbb E(Z_i)$.
 
-# Session Info and Bibliography
+# Appendix 2: Deriving Existence of a Maximum Value
+
+I will warn you that this is a math heavy section.
+
+To determine the existence of an maximum value is a straightforward calculus problem. We are specifically looking for a change in the derivative from positive to negative for values of $x_{markup} > 0$. The tldr; version of this is that $\beta_{markup} < 0$ is the only scenario where a maximum exists and is relatively easy to check.
+
+We need to fully expand the revenue function earlier as
+
+$$
+f(x) = c_1(1 + \frac{x}{100})(1 + \exp[-(c_2 + x * \beta )])^{-1}
+$$
+where I shorten the notation such that $x = x_markup$, $c_1 = x_cost$, and $c_2$ is the rest of the covariates, i.e. $c_2 = -(\beta_0 + x_{cost} * \beta_{cost} + x_{type=shoes} * \beta_{type=shoes} + x_{type = clothes}*\beta_{type = clothes})$. These values are constants in the function as we are only optimizing markup.
+
+Now we calculate the derivative of this function with respect to $x_{markup}$ to be:
+
+$$
+f'(x) = c_1 \left [ \left ( \frac{1}{100} \right ) \frac{1}{1 + \exp[-(c_2 + x \beta )]} + \beta (1 + \frac{x}{100}) \left ( \frac{1}{1 + \exp[-(c_2 + x * \beta )]} \right ) \left ( \frac{\exp[-(c_2 + x * \beta )]}{1 + \exp[-(c_2 + x * \beta )} \right ) \right]
+$$
+
+Recall that $\pi_i = \frac{1}{1 + \exp[-(c_2 + x \beta )]}$ and therefore $1 - \pi_i = \frac{\exp[-(c_2 + x \beta )]}{1 + \exp[-(c_2 + x \beta )]}$. Rewriting the above derivative gives the more compact equation:
+
+$$
+f'(x) = c_1 \left [ \left ( \frac{1}{100} \right ) \pi_i + \beta (1 + \frac{x}{100}) \pi_i (1 - \pi_i) \right]
+$$
+
+
+## Scenario 1: when $\beta < 0$
+
+If $\beta < 0$, then $\displaystyle \lim_{x \to \infty} \pi_i = 0$. Applying this to the derivative reveals that 
+
+$$ 
+\displaystyle \lim_{x \to \infty} f'(x) = 0
+$$
+
+Suppose that $f'(0) > 0$, then by Rolle's Theorem there exists some value of $x > 0$ where $f'(x) < 0$. Therefore, we only need to check if $f'(0) > 0$ when $\beta < 0$ to know that a maximum exists.
+
+## Scenario 2: When $\beta > 0$
+
+If $\beta > 0$, then $\displaystyle \lim_{x \to \infty} \pi_i = 1$ and applying this to the original function now reveals that
+
+$$
+\displaystyle \lim_{x \to \infty} f(x) = \infty
+$$
+
+Therefore, no absolute maximum exists in this scenario. To interpret this scenario, the customers are more likely to buy the products the more markup percentage there is, so it would be wise to set the markup to infinity.
+
+## Scenario 3: When $\beta = 0$
+
+For completeness, when $\beta = 0$ then $\pi_i$ is constant with respect to the markup. Therefore the limit for the revenue function is again:
+
+$$
+\displaystyle \lim_{x \to \infty} f(x) = \infty
+$$
+
+Therefore, no absolute maximum exists in this scenario. Unlike when $\beta > 0$, customers are indifferent to increases in markup so one might as well set the markup to infinity.
+
+
+# Session Info {.appendix}
+
+Below is my R session info that you may refer to in the event the code is not reproducible. I suggest running all chunks in the order presented and only run them once to ensure you get a reproducible result of this code due to the simulated parts of the analysis.
 
 ```{r}
 sessionInfo()
