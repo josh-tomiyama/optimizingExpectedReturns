@@ -459,6 +459,7 @@ We are specifically interested in how markup relates to the probability of selli
 ```{r}
 #| label: fig-probexample
 #| fig-cap: "An example of a probability curve with 95% confidence intervals when cost and type are set to the sample average and sample mode respectively"
+#| classes: preview-image
 ## there isn't a mode function in base R
 getMode <- function(x){
   lx <- levels(x)
