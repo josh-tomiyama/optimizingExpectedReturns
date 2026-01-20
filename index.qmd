@@ -591,7 +591,7 @@ What is important to note about the numerical optimization algorithms in `optim(
 
 Important outputs to inspect from the `optim()` function is `par` which is the markup value where the maximum occurs, `value` which is maximum revenue value, and `convergence` which should be 0 so that you know that the algorithm completed successfully.
 
-```{r}
+```{r optimal calculation}
 optimal_vals <- optim(
       # initial guess
       par = 20, 
@@ -629,7 +629,7 @@ From this analysis, we find that for an accessory product that costs of \$`r rou
 
 Although our formula calculates an optimal markup of `r round(optimal_df$optimal_markup, digits = 2)` percent, we need to keep in mind that the range of markup in the data set are values between 20 and 120 percent. Thus, a markup of `r round(optimal_df$optimal_markup, digits = 2)` percent is outside the region covered by the data. I would suggest collecting more data in this range before widely adopting this decision rule.
 
-In this section we only looked at one specific combination of covariates where the product cost is equal to the average cost and the product type is the most common type in the data set. Of course, we may want to consider cases with combinations of product costs and product types. To explore these different scenarios more easily, I've created a Rshiny dashboard that'll be linked below when it's done.
+In this section we only looked at one specific combination of covariates where the product cost is equal to the average cost and the product type is the most common type in the data set. Of course, we may want to consider cases with combinations of product costs and product types. To explore these different scenarios more easily, I've created an [R shiny dashboard](../logisticRegressionShiny/shinyApp.qmd){target="_blank"}.
 
 ## Hypothetical Impact of Optimal Markup strategy
 
@@ -643,7 +643,7 @@ For each point in our data set, we will substitute the observed markup value wit
 
 Calculating the optimal markup for the entire data set is a bit slow, so I used the `future.apply` package in R to run the the calculation in parallel. Going into detail about the `future.apply` package and parallel computing in R is beyond the scope of this project, but I'll make a blog post about it sometime in the future (pun semi-intended).
 
-```{r}
+```{r hypo_rev}
 calc_optimal_markup <- function(cost, type, fit){
   optim(par = 20, 
       fn = expected_return, 
@@ -815,6 +815,6 @@ No absolute maximum exists in this scenario. Unlike when $\beta > 0$, customers 
 
 Below is my R session info that you may refer to in the event the code is not reproducible. I suggest running all chunks in the order presented and only run them once to ensure for the best chance to get reproducible code.
 
-```{r}
+```{r sessInfo}
 sessionInfo()
 ```
