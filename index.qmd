@@ -35,7 +35,7 @@ library(scales)
 
 # Introduction
 
-This will be the one of the first in a series of example analyses I plan to post online to showcase my statistical technical knowledge as well as document some interesting problems I have come across in my experience. I specifically want to focus on what to do over the course of a logistic regression and why I make certain decisions over the course of the analysis to solve the question at hand. 
+This will be the one of the first in a series of example analyses I plan to post online to showcase my statistical technical knowledge as well as document some interesting problems I have come across in my experience. I specifically want to focus on what to do over the course of a logistic regression and why I make certain decisions over the course of the analysis to solve the question at hand.
 
 This project is organized into the following parts:
 
@@ -45,9 +45,9 @@ This project is organized into the following parts:
 
 3.  A method to leverage the logistic regression model to optimize some target goal [jump to section](#sec-optimize)
 
-In this project, the data is simulated to mirror the format of the original application problem and to ease the model building process to really focus on the optimization methodology. Though the model building will be as perfect as perfect can be, I will some guidance on options to consider when conditions are less ideal. 
+In this project, the data is simulated to mirror the format of the original application problem and to ease the model building process to really focus on the optimization methodology. Though the model building will be as perfect as perfect can be, I will some guidance on options to consider when conditions are less ideal.
 
-The material here details the process for conducting a logistic regression analysis and summarizes about 1-2 college semesters of statistics courses in one document.  Readers who are already familiar with logistic regression models may want to skip to the section that details the analysis question and then skip to the section on how to optimize for a target goal.
+The material here details the process for conducting a logistic regression analysis and summarizes about 1-2 college semesters of statistics courses in one document. Readers who are already familiar with logistic regression models may want to skip to the section that details the analysis question and then skip to the section on how to optimize for a target goal.
 
 # Logistic Regression
 
@@ -223,15 +223,15 @@ plot(markup, cost,
      xlab = "markup of product (%)")
 ```
 
-The first table summarizes markup and the cost variables by whether the product sold (the 1 group) or not (the 0 group). Comparing these two groups, we can clearly see that markup is lower in the groups that sold and indicates a negative association between sales and markup. The distribution of cost shifts about 100 dollars higher in the group that sold and thus suggests a positive association between cost and sales. 
+The first table summarizes markup and the cost variables by whether the product sold (the 1 group) or not (the 0 group). Comparing these two groups, we can clearly see that markup is lower in the groups that sold and indicates a negative association between sales and markup. The distribution of cost shifts about 100 dollars higher in the group that sold and thus suggests a positive association between cost and sales.
 
 From the first table, it is important to take note of how many sales (442) and failed sales (2558) are observed in the data set as this guides how many parameters are estimable in the model. A conservative rule-of-thumb is 10 events per parameter in the model where events is defined as the minimum of sales (442) and failed sales (2558). By this rule of thumb, one can reliably have about 44 parameters in the model. To gain intuition about how this is an issue, imagine if there were 0 sales in the data set. Then the only guess one could make based on the data is that every sale will fail (a violation of assumption 5); it is not clear how any of the covariates impact the probability of selling as there is no data on a sale being made.
 
-The second table summarizes the different covariates and outcome by type. We don't notice any difference in the distributions of markup and cost as the quartiles and averages are about the same across the different product types. This implies that type is associated with neither the cost nor markup, and this is a best case scenario for a logistic regression analysis (in relation to assumption 3). The proportion of successful sales is different among the product types with clothes selling at the highest rate followed by shoes and then accessories. This implies that there may be an association between type and product sales. 
+The second table summarizes the different covariates and outcome by type. We don't notice any difference in the distributions of markup and cost as the quartiles and averages are about the same across the different product types. This implies that type is associated with neither the cost nor markup, and this is a best case scenario for a logistic regression analysis (in relation to assumption 3). The proportion of successful sales is different among the product types with clothes selling at the highest rate followed by shoes and then accessories. This implies that there may be an association between type and product sales.
 
-Clearly, there is an imbalance in the distribution of type in the data set (i.e. the data set is not evenly split to be 1000 for each product type) and that can be potentially problematic for logistic regression estimates. For example, if the shoes product type only had 10 data points, then there would not be enough data to reliably estimate how shoes relate to a successful sale. Luckily in this scenario, we have enough cases (over six hundred) of each product type such that including type in the logistic regression model should be reliably estimable. 
+Clearly, there is an imbalance in the distribution of type in the data set (i.e. the data set is not evenly split to be 1000 for each product type) and that can be potentially problematic for logistic regression estimates. For example, if the shoes product type only had 10 data points, then there would not be enough data to reliably estimate how shoes relate to a successful sale. Luckily in this scenario, we have enough cases (over six hundred) of each product type such that including type in the logistic regression model should be reliably estimable.
 
-A related but much more severe issue is whether there are enough observations of sales or failed sales in each category. In an extreme scenario, imagine whether no shoe sales where made. The intuitive best guess for the model is that if the product type is a shoe then the probability of selling is 0  (which is a violation of assumption 5). Of course, when there are small categories, like in the earlier scenario when shoe sales were only 10, this problem is more likely to occur. The same rule-of-thumb of at least 10 of each sales and failed sales applies here.
+A related but much more severe issue is whether there are enough observations of sales or failed sales in each category. In an extreme scenario, imagine whether no shoe sales where made. The intuitive best guess for the model is that if the product type is a shoe then the probability of selling is 0 (which is a violation of assumption 5). Of course, when there are small categories, like in the earlier scenario when shoe sales were only 10, this problem is more likely to occur. The same rule-of-thumb of at least 10 of each sales and failed sales applies here.
 
 In cases where there are covariate imbalance or lack of events in a category, there are a number of options available to ameliorate the problem and each have their pros and cons. Continuing the from the previous example, one option is to simply collect more data on shoe sales. This is the most statistically sound option but might be impractical due to cost or the nature of collecting the data. Another option is to combine categories together that are similar. In the context of this problem, imagine if shoes had only 10 data points. Then it might be advantageous to contextualize the data as whether the sale was accessories or not by combining the shoes and clothes categories together. The problem is justifying whether to combine shoes with the accessories or clothes category. One could use background knowledge about the problem, some measurement of improved model performance, or some sort of clustering algorithm to combine categories together.
 
@@ -264,25 +264,25 @@ Regardless of whether interpreting the model coefficients is important for the g
 
 In terms of continuous covariates in the model at hand, the $\beta_{markup}$ is a negative value so the probability generally decreases as the markup percentage increases. Meanwhile, $\beta_{cost}$ is positive so the probability generally increases as the cost of the good increases. This makes intuitive sense in terms of the problem. As the cost to produce a product increases it is more likely to be of higher quality or made from rarer materials, and that could be enticing for luxury customers. When markup increases, the sales cost of the item increases while the quality of the item doesn't change, so too much markup reduces the bargain from the item.
 
-It is very important to note that the raw numbers given in the table above do not make it immediately obvious how fast or slow the probability of success $\pi_i$ increases or decreases with respect to that continuous covariate without doing a bit of math (see [this section]({#sec-probcalc})). The raw numbers are instead related directly to the log-odds of a sale $\log(\frac{\pi_i}{1 - \pi_i})$. In addition to that, at first glance the $\beta_{cost}$ variable seems small relative to the other variables in the model. This is due to cost being in the magnitude of 1000s while markup is in the magnitude of 10s. One could opt to rescale and center covariates in the model so that estimates are on the same magnitude and make the fitting algorithm more stable, but to simplify the model building and interpretation I forego that step.
+It is very important to note that the raw numbers given in the table above do not make it immediately obvious how fast or slow the probability of success $\pi_i$ increases or decreases with respect to that continuous covariate without doing a bit of math (see [this section](%7B#sec-probcalc%7D)). The raw numbers are instead related directly to the log-odds of a sale $\log(\frac{\pi_i}{1 - \pi_i})$. In addition to that, at first glance the $\beta_{cost}$ variable seems small relative to the other variables in the model. This is due to cost being in the magnitude of 1000s while markup is in the magnitude of 10s. One could opt to rescale and center covariates in the model so that estimates are on the same magnitude and make the fitting algorithm more stable, but to simplify the model building and interpretation I forego that step.
 
 For categorical variables, one has to consider how they are encoded into the model to interpret the coefficients. In this model, we encoded it such that the intercept is the accessories category and we use it as a baseline to judge the shoes and clothes category. Since both $\beta_{shoes}$ and $\beta_{clothes}$ have positive estimates, the model suggests that both shoes and clothes have a higher probability of selling relative to accessories. Based on the numerical values, shoes is the category with the highest probability of sales, followed by clothes, and finally accessories. This reflects the same trend observed in the observational data analysis, so there doesn't seem to be any peculiar patterns in the model.
 
 ### Comparing Different Logistic Regression Models
 
-When comparing two logistic regression models, there are two common statistical performance criteria: the Bayesian Information Criterion (BIC) and Akaike Information Criterion (AIC). Both are quantities that expresses how well the proposed model fits the data while also balancing how many parameters are in a model. More parameters in a model results in a better fit to the data but too many parameters results in overfitting. The problem with an overfit model is the lack of generalizability to new data. BIC favors having less parameters in a model as compared to it's counterpart the Akaike Information Criterion (AIC)[^2]. Therefore, the BIC is sometimes the preferred model selection criterion when the goal is to identify what covariates go into a model, and thus BIC aligns with our goal in this analysis. On the other hand, the theory of how AIC is derived indicates that it is superior when the analysis goal is prediction. 
-
-One strong advantage of AIC and BIC is that they do not require splitting the data into a training set and test set due to their theoretical derivations. The downside to splitting the data is that using less data to build a model results in less precise estimates. If one were to use an alternative test metric to choose a model, such as prediction accuracy, recall, precision, F1 score, or AUC, then one would need to either use a form of cross-validation or split the data to not have overly optimistic estimates of the data. To elaborate on over optimism, the idea is a statistical model performs best if it is applied to exactly the same data used to build the model. So to estimate these other performance metrics reliably, one needs to apply the model to data not used in building. 
-
-One major disadvantage about AIC and BIC but the formula requires that the model have a log-likelihood and the ability to count the number of parameters in the model. This is mainly a problem for modern machine learning models like random forest and neural networks where in the former the typical algorithm doesn't have a log-likelihood and the latter the number of parameters is difficult to count. In these cases, it is better to use the other performance metrics as they do not need log-likelihood or the number of parameters in the model to estimate (this is known as model agnostic performance metrics.)
-
-The actual numerical values of BIC and AIC are only useful when comparing them to the AIC and BIC of other models. To elaborate, a BIC value of 100 doesn't indicate anything about how well the model fits. Instead, lower values of BIC or AIC indicate a better statistical model for the data compared to the BIC or AIC of a different model. A difference of at least 2 is the typical threshold to consider one model superior the other. For differences of less than 2 the models are about equivalent and one must decide which model is superior. In these situations, one may opt for the model with less parameters in favor a simpler model or the context of the application problem can favor the more complicated model. 
+When comparing two logistic regression models, there are two common statistical performance criteria: the Bayesian Information Criterion (BIC) and Akaike Information Criterion (AIC). Both are quantities that expresses how well the proposed model fits the data while also balancing how many parameters are in a model. More parameters in a model results in a better fit to the data but too many parameters results in overfitting. The problem with an overfit model is the lack of generalizability to new data. BIC favors having less parameters in a model as compared to it's counterpart the Akaike Information Criterion (AIC)[^2]. Therefore, the BIC is sometimes the preferred model selection criterion when the goal is to identify what covariates go into a model, and thus BIC aligns with our goal in this analysis. On the other hand, the theory of how AIC is derived indicates that it is superior when the analysis goal is prediction.
 
 [^2]: The penalty term for BIC is $\log(n)n_{par}$ where $n$ is the sample size of the data and $n_{par}$ is the number of parameters is larger then the penalty term of $2n_{par}$ for AIC. Thus, BIC requires more evidence to add a new parameter into a model than AIC.
 
+One strong advantage of AIC and BIC is that they do not require splitting the data into a training set and test set due to their theoretical derivations. The downside to splitting the data is that using less data to build a model results in less precise estimates. If one were to use an alternative test metric to choose a model, such as prediction accuracy, recall, precision, F1 score, or AUC, then one would need to either use a form of cross-validation or split the data to not have overly optimistic estimates of the data. To elaborate on over optimism, the idea is a statistical model performs best if it is applied to exactly the same data used to build the model. So to estimate these other performance metrics reliably, one needs to apply the model to data not used in building.
+
+One major disadvantage about AIC and BIC but the formula requires that the model have a log-likelihood and the ability to count the number of parameters in the model. This is mainly a problem for modern machine learning models like random forest and neural networks where in the former the typical algorithm doesn't have a log-likelihood and the latter the number of parameters is difficult to count. In these cases, it is better to use the other performance metrics as they do not need log-likelihood or the number of parameters in the model to estimate (this is known as model agnostic performance metrics.)
+
+The actual numerical values of BIC and AIC are only useful when comparing them to the AIC and BIC of other models. To elaborate, a BIC value of 100 doesn't indicate anything about how well the model fits. Instead, lower values of BIC or AIC indicate a better statistical model for the data compared to the BIC or AIC of a different model. A difference of at least 2 is the typical threshold to consider one model superior the other. For differences of less than 2 the models are about equivalent and one must decide which model is superior. In these situations, one may opt for the model with less parameters in favor a simpler model or the context of the application problem can favor the more complicated model.
+
 #### Applying BIC
 
-In addition to the true model, let's consider three other logistic regression models. One without type in the model but all other variables in the model. The hypothesis behind this model is that the product type is not related to the probability of a successful sale. 
+In addition to the true model, let's consider three other logistic regression models. One without type in the model but all other variables in the model. The hypothesis behind this model is that the product type is not related to the probability of a successful sale.
 
 $$
 \log(\frac{\pi_i}{1 - \pi_i}) = \beta_0 + x_{markup} * \beta_{markup} + 
@@ -413,7 +413,7 @@ binnedplot(x = fitted(fit),
            main="Binned residual plot")
 ```
 
-The next plot below is a binned residual plot where the bins are made according to the markup covariate. The plot seems fine nice and random and within the confidence intervals until the point where markup is 60\% or higher where the binned plot degenerates to 0. This is an expected pattern due to no sales being made for markups above 57\%,
+The next plot below is a binned residual plot where the bins are made according to the markup covariate. The plot seems fine nice and random and within the confidence intervals until the point where markup is 60% or higher where the binned plot degenerates to 0. This is an expected pattern due to no sales being made for markups above 57%,
 
 ```{r}
 #| label: fig-binmarkup
@@ -553,7 +553,7 @@ expected_return <- function(markup, cost, type, fit, log = FALSE){
   
   if(log){
    ### when doing optimization, the log scale is more stable if there are convergence issues
-   ### need to restrict if markup > 0
+   ### need to restrict to markup > 0
     log(1 + markup/100) + log(cost) + 
       log(predict(fit, newdata = new_data, type = "response"))
   }else{
@@ -593,7 +593,7 @@ Important outputs to inspect from the `optim()` function is `par` which is the m
 
 ```{r}
 optimal_vals <- optim(
-      # initical guess
+      # initial guess
       par = 20, 
       # function to optimize
       fn = expected_return, 
@@ -781,7 +781,7 @@ $$
 f'(x) = c_1 \left [ \left ( \frac{1}{100} \right ) \pi_i + \beta (1 + \frac{x}{100}) \pi_i (1 - \pi_i) \right]
 $$
 
-**Scenario 1: when $\beta < 0$**
+**Scenario 1: when** $\beta < 0$
 
 If $\beta < 0$, then $\displaystyle \lim_{x \to \infty} \pi_i = 0$. Applying this to the derivative reveals that
 
@@ -791,7 +791,7 @@ $$
 
 Suppose that $f'(0) > 0$, then by Rolle's Theorem there exists some value of $x > 0$ where $f'(x) < 0$. Therefore, we only need to check if $f'(0) > 0$ when $\beta < 0$ to know that a maximum exists.
 
-**Scenario 2: When $\beta > 0$**
+**Scenario 2: When** $\beta > 0$
 
 If $\beta > 0$, then $\displaystyle \lim_{x \to \infty} \pi_i = 1$ and applying this to the original function now reveals that
 
@@ -801,7 +801,7 @@ $$
 
 Therefore, no absolute maximum exists in this scenario. To interpret this scenario, the customers are more likely to buy the products the more markup percentage there is, so it would be wise to set the markup to infinity.
 
-**Scenario 3: When $\beta = 0$**
+**Scenario 3: When** $\beta = 0$
 
 For completeness, if $\beta = 0$, then $\pi_i$ is constant with respect to the markup percentage. Therefore the limit for the revenue function is again:
 
