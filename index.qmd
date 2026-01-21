@@ -103,6 +103,8 @@ Suppose that one is starting an online luxury clothing store selling clothes, sh
 
 Defining and estimating the optimal markup percentage is the novel part of the analysis that I think differentiates this analysis from typical logistic regression analyses where the focus is usually on determining a statistically significant relationship between a covariate and the outcome of interest.
 
+To be clear, this MUCH simplified version of a problem that a friend approached me for consultation. For privacy reasons and to focus more on the methodology used.
+
 # Simulating Toy Data {#sec-simdata}
 
 Before proceeding with the analysis, we shall simulate a toy data set in R that will fit the problem. In the ideal case, I would have found a real world data set that matches our example, but my superficial search of the internet returned only aggregated product sales and wouldn't quite match the situation described above. This does detract from exploratory analyses as I know how the data is generated and greatly simplifies the model building process. However, the general workflow and considerations for building the model would be the same with a real data set.
@@ -276,7 +278,7 @@ When comparing two logistic regression models, there are two common statistical 
 
 One strong advantage of AIC and BIC is that they do not require splitting the data into a training set and test set due to their theoretical derivations. The downside to splitting the data is that using less data to build a model results in less precise estimates. If one were to use an alternative test metric to choose a model, such as prediction accuracy, recall, precision, F1 score, or AUC, then one would need to either use a form of cross-validation or split the data to not have overly optimistic estimates of the data. To elaborate on over optimism, the idea is a statistical model performs best if it is applied to exactly the same data used to build the model. So to estimate these other performance metrics reliably, one needs to apply the model to data not used in building.
 
-One major disadvantage about AIC and BIC is that the formula requires that the model have a log-likelihood and the ability to count the number of parameters in the model. This is mainly a problem for popular  modern machine learning models like random forest and neural networks where in the former the typical algorithm doesn't have a log-likelihood and the latter the number of parameters is difficult to count. In these cases, it is better to use the other performance metrics as they do not need log-likelihood or the number of parameters in the model to estimate (this is known as model agnostic performance metrics.)
+One major disadvantage about AIC and BIC is that the formula requires that the model have a log-likelihood and the ability to count the number of parameters in the model. This is mainly a problem for popular modern machine learning models like random forest and neural networks where in the former the typical algorithm doesn't have a log-likelihood and the latter the number of parameters is difficult to count. In these cases, it is better to use the other performance metrics as they do not need log-likelihood or the number of parameters in the model to estimate (this is known as model agnostic performance metrics.)
 
 The actual numerical values of BIC and AIC are only useful when comparing them to the AIC and BIC of other models. To elaborate, a BIC value of 100 doesn't indicate anything about how well the model fits. Instead, lower values of BIC or AIC indicate a better statistical model for the data compared to the BIC or AIC of a different model. A difference of at least 2 is the typical threshold to consider one model superior the other. For differences of less than 2 the models are about equivalent and one must decide which model is superior. In these situations, one may opt for the model with less parameters in favor a simpler model or the context of the application problem can favor the more complicated model.
 
@@ -289,7 +291,7 @@ $$
 x_{cost} * \beta_{cost}
 $$
 
-A second model with a quadratic term for markup and including all the other variables. The hypothesis for this model is that the rate that the log odds increases or decreases depends on the value current value of markup. 
+A second model with a quadratic term for markup and including all the other variables. The hypothesis for this model is that the rate that the log odds increases or decreases depends on the value current value of markup.
 
 $$
 \log(\frac{\pi_i}{1 - \pi_i}) = \beta_0 + x_{markup} * \beta_{markup} + x_{markup}^2 * \beta_{markup^2} +
@@ -586,7 +588,7 @@ ggplot(exp_return_df, aes(x = x, y = y)) +
        y = "Expected Revenue ($)")
 ```
 
-From the graph above, it is clear that a maximum occurs around where markup is \~20% and the expected revenue is about \~2100. To calculate the exact value for the optimal markup and expected revenue, we will need to use a numerical optimization algorithm. In R, we can accomplish this using the `optim()` function. There are several different algorithms to choose from, in this case the  Broyden–Fletcher–Goldfarb–Shanno (BFGS) quasi-newton method is a great choice. Going into detail of the BFGS algorithm is beyond the scope of this project. The [wikipedia page](https://en.wikipedia.org/wiki/Broyden%E2%80%93Fletcher%E2%80%93Goldfarb%E2%80%93Shanno_algorithm){target="_blank"} is an excellent starting point for more information.
+From the graph above, it is clear that a maximum occurs around where markup is \~20% and the expected revenue is about \~2100. To calculate the exact value for the optimal markup and expected revenue, we will need to use a numerical optimization algorithm. In R, we can accomplish this using the `optim()` function. There are several different algorithms to choose from, in this case the Broyden–Fletcher–Goldfarb–Shanno (BFGS) quasi-newton method is a great choice. Going into detail of the BFGS algorithm is beyond the scope of this project. The [wikipedia page](https://en.wikipedia.org/wiki/Broyden%E2%80%93Fletcher%E2%80%93Goldfarb%E2%80%93Shanno_algorithm){target="_blank"} is an excellent starting point for more information.
 
 What is important to note about the numerical optimization algorithms in `optim()` is that they assume that the function is differentiable and continuous with respect to the input variable, in this case $x_{markup}$. This is true for this specific logistic regression model, but can be not true depending on how you encode $x_{markup}$. This is specifically troublesome for the tree-based machine learning models because they discretize continuous variables to build the model. Likewise, any logistic regression model that discretizes $x_{markup}$ would also not work with `optim()`.
 
