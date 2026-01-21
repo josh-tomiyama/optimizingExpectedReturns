@@ -45,7 +45,7 @@ This project is organized into the following parts:
 
 3.  A method to leverage the logistic regression model to optimize some target goal [jump to section](#sec-optimize)
 
-In this project, the data is simulated to mirror the format of the original application problem and to ease the model building process to really focus on the optimization methodology. Though the model building will be as perfect as perfect can be, I will some guidance on options to consider when conditions are less ideal.
+In this project, the data is simulated to mirror the format of the original application problem and to ease the model building process to really focus on the optimization methodology. Though the model building will be as perfect as perfect can be, I will give guidance on options to consider when conditions are less ideal.
 
 The material here details the process for conducting a logistic regression analysis and summarizes about 1-2 college semesters of statistics courses in one document. Readers who are already familiar with logistic regression models may want to skip to the section that details the analysis question and then skip to the section on how to optimize for a target goal.
 
@@ -272,7 +272,7 @@ For categorical variables, one has to consider how they are encoded into the mod
 
 When comparing two logistic regression models, there are two common statistical performance criteria: the Bayesian Information Criterion (BIC) and Akaike Information Criterion (AIC). Both are quantities that expresses how well the proposed model fits the data while also balancing how many parameters are in a model. More parameters in a model results in a better fit to the data but too many parameters results in overfitting. The problem with an overfit model is the lack of generalizability to new data. BIC favors having less parameters in a model as compared to it's counterpart the Akaike Information Criterion (AIC)[^2]. Therefore, the BIC is sometimes the preferred model selection criterion when the goal is to identify what covariates go into a model, and thus BIC aligns with our goal in this analysis. On the other hand, the theory of how AIC is derived indicates that it is superior when the analysis goal is prediction.
 
-[^2]: The penalty term for BIC is $\log(n)n_{par}$ where $n$ is the sample size of the data and $n_{par}$ is the number of parameters is larger then the penalty term of $2n_{par}$ for AIC. Thus, BIC requires more evidence to add a new parameter into a model than AIC.
+[^2]: The penalty term for BIC is $\log(n)n_{par}$, where $n$ is the sample size of the data and $n_{par}$ is the number of parameters, is larger then the penalty term of $2n_{par}$ for AIC. Thus, BIC requires more evidence to add a new parameter into a model than AIC.
 
 One strong advantage of AIC and BIC is that they do not require splitting the data into a training set and test set due to their theoretical derivations. The downside to splitting the data is that using less data to build a model results in less precise estimates. If one were to use an alternative test metric to choose a model, such as prediction accuracy, recall, precision, F1 score, or AUC, then one would need to either use a form of cross-validation or split the data to not have overly optimistic estimates of the data. To elaborate on over optimism, the idea is a statistical model performs best if it is applied to exactly the same data used to build the model. So to estimate these other performance metrics reliably, one needs to apply the model to data not used in building.
 
